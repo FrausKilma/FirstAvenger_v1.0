@@ -1,0 +1,75 @@
+unit UIMG;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, cxGraphics, cxControls, cxLookAndFeels,
+  cxLookAndFeelPainters, cxContainer, cxEdit, System.Actions, Vcl.ActnList,
+  cxImage, DB;
+
+type
+  TFIMG = class(TForm)
+    cxImage1: TcxImage;
+    actlstMAIN: TActionList;
+    procedure FormShow(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+  RImage = record
+    ID:Integer;
+    Name:Integer;
+    Code:string;
+    IMG:TMemoryStream;
+    TimerON:Boolean;
+    Time:Integer;
+    IDX:Integer;
+    procedure add;
+  end;
+
+var
+  FIMG: TFIMG;
+  ImageControler:array of RImage;
+  DefImage:RImage;
+
+implementation
+uses UFirstAvenger;
+
+{$R *.dfm}
+procedure RImage.add;
+var num:Integer;
+MS:TMemoryStream;
+begin
+ SetLength(ImageControler, Length(ImageControler)+1);
+ num:=High(ImageControler);
+ ImageControler[num].ID := FMain.IBTActions.FieldByName('ID').AsInteger;
+ ImageControler[num].Name := FMain.IBTActions.FieldByName('NAME').AsString;
+ ImageControler[num].Code := FMain.IBTActions.FieldByName('CODE').AsString;
+ MS := TMemoryStream.Create;
+ ImageControler[num].IMG := TBlobField(FMain.IBTActions.FieldByName('BODY')).SaveToStream(MS);
+ ImageControler[num].TimerON := false; // GO TO
+ ImageControler[num].Time := 0; // GO TO
+ FreeAndNil(MS);
+end;
+
+procedure TFIMG.FormCreate(Sender: TObject);
+begin
+  SetLength(ImageControler, 0);
+end;
+
+procedure TFIMG.FormShow(Sender: TObject);
+var i:Integer;
+defAction:TAction;
+begin
+ FMain.IBTActions.First;
+ while not FMain.IBTActions.Eof do
+ begin
+  DefImage.add;
+  FMain.IBTActions.Next;
+ end;
+end;
+
+end.

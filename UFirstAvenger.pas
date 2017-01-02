@@ -8,7 +8,7 @@ uses
   cxButtons, ExtCtrls, IBDatabase, DB, cxControls, cxStyles, cxCustomData, cxFilter, cxData, cxDataStorage, cxEdit,
   cxDBData, cxImage, cxGridCustomTableView, cxGridTableView, cxGridDBTableView, IBCustomDataSet, IBTable, cxGridLevel,
   cxGridCustomView, cxGrid, IBUpdateSQL, IBQuery, jpeg,
-  System.Actions, cxNavigator;
+  System.Actions, cxNavigator, UIMG, PortUnit;
 
 type
   TFMain = class(TForm)
@@ -60,6 +60,7 @@ type
     procedure CreateQuery(var Q:TIBQuery);
     procedure IBTActionsAfterTransactionEnd(Sender: TObject);
     procedure IBTActionsAfterDelete(DataSet: TDataSet);
+    procedure BStartClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -171,15 +172,14 @@ end;
 procedure TFMain.AEditExecute(Sender: TObject);
 var MS:TMemoryStream;
 QUpd:TIBQuery;
+
 begin
   IBTActions.Edit;
   Application.CreateForm(TFAction, FAction);
   MS := TMemoryStream.Create;
   TBlobField(IBTActions.FieldByName('BODY')).SaveToStream(MS);
-//  MS.SaveToFile('1.jpg');
-//  FAction.Image1.Picture.LoadFromFile('1.jpg');
-  MS.Position := 1;
-  FAction.Image1.Picture.Bitmap.LoadFromStream(MS);
+  MS.SaveToFile('1.jpg');
+  FAction.Image1.Picture.LoadFromFile('1.jpg');
   if FAction.ShowModal = mrOk
    then
    begin
@@ -215,6 +215,14 @@ procedure TFMain.ARefreshExecute(Sender: TObject);
 begin
  IBTActions.Close;
  IBTActions.Open;
+end;
+
+procedure TFMain.BStartClick(Sender: TObject);
+begin
+ if IBTActions.IsEmpty then Exit;
+ PortUnit.PortInit;
+ Application.CreateForm(TFIMG, FIMG);
+ FIMG.ShowModal;
 end;
 
 procedure TFMain.Button1Click(Sender: TObject);

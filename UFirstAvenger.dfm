@@ -36,6 +36,7 @@ object FMain: TFMain
       Default = True
       LookAndFeel.Kind = lfOffice11
       TabOrder = 0
+      OnClick = BStartClick
     end
   end
   object cxGrid1: TcxGrid
@@ -210,7 +211,7 @@ object FMain: TFMain
     Left = 520
     Top = 12
     Bitmap = {
-      494C0101050009000C0020002000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010105000900140020002000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000800000004000000001002000000000000080
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1274,7 +1275,8 @@ object FMain: TFMain
       000000000000}
   end
   object IBDatabase1: TIBDatabase
-    DatabaseName = 'C:\Users\Anton\Desktop\port\AVENGER.GDB'
+    Connected = True
+    DatabaseName = 'G:\My projects\FirstAvenger\FirstAvenger\AVENGER.GDB'
     Params.Strings = (
       'user_name=SYSDBA'
       'password=masterkey'
@@ -1286,6 +1288,7 @@ object FMain: TFMain
     Top = 368
   end
   object IBTransaction1: TIBTransaction
+    Active = True
     DefaultDatabase = IBDatabase1
     DefaultAction = TACommitRetaining
     Left = 108
@@ -1331,6 +1334,7 @@ object FMain: TFMain
     Transaction = IBTransaction1
     AfterDelete = IBTActionsAfterDelete
     AfterInsert = IBTActionsAfterInsert
+    Active = True
     BufferChunks = 1000
     CachedUpdates = False
     FieldDefs = <
@@ -1376,23 +1380,29 @@ object FMain: TFMain
     object IBTActionsID: TIntegerField
       AutoGenerateValue = arDefault
       FieldName = 'ID'
+      Origin = '"ACTIONS"."ID"'
       ProviderFlags = [pfInKey]
       Required = True
     end
     object IBTActionsNAME: TIBStringField
       FieldName = 'NAME'
+      Origin = '"ACTIONS"."NAME"'
       Required = True
     end
     object IBTActionsBODY: TBlobField
       FieldName = 'BODY'
+      Origin = '"ACTIONS"."BODY"'
+      ProviderFlags = [pfInUpdate]
       Size = 8
     end
     object IBTActionsCODE: TIBStringField
       FieldName = 'CODE'
+      Origin = '"ACTIONS"."CODE"'
       Required = True
     end
     object IBTActionsIDX: TIntegerField
       FieldName = 'IDX'
+      Origin = '"ACTIONS"."IDX"'
       Required = True
     end
   end
