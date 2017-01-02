@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>1899.12.30 00:00:00.000.433,G:\My projects\TryComPort\UFirstAvenger.pas=G:\My projects\TryComPort\UTest.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.942,G:\My projects\TryComPort\PFirstAvenger.dproj=G:\My projects\TryComPort\PTest.dproj</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.433,G:\My projects\TryComPort\UFirstAvenger.dfm=G:\My projects\TryComPort\UTest.dfm</Transaction>
+  </Transactions>
+</BorlandProject>
