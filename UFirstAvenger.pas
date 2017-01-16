@@ -8,7 +8,7 @@ uses
   cxButtons, ExtCtrls, IBDatabase, DB, cxControls, cxStyles, cxCustomData, cxFilter, cxData, cxDataStorage, cxEdit,
   cxDBData, cxImage, cxGridCustomTableView, cxGridTableView, cxGridDBTableView, IBCustomDataSet, IBTable, cxGridLevel,
   cxGridCustomView, cxGrid, IBUpdateSQL, IBQuery, jpeg,
-  System.Actions, cxNavigator, UIMG, PortUnit;
+  System.Actions, cxNavigator, UIMG, PortUnit, CPort, USetting, cxCheckBox;
 
 type
   TFMain = class(TForm)
@@ -48,6 +48,18 @@ type
     IBTActionsCODE: TIBStringField;
     IBTActionsIDX: TIntegerField;
     IBUpdateSQL1: TIBUpdateSQL;
+    ComPort1: TComPort;
+    dxBarLargeButton5: TdxBarLargeButton;
+    ASettings: TAction;
+    Timer1: TTimer;
+    IBTActionsISTIMER: TSmallintField;
+    IBTActionsTIMERTIME: TSmallintField;
+    IBTActionsSUBIDX: TSmallintField;
+    cxGrid1DBTableView1ISTIMER: TcxGridDBColumn;
+    cxGrid1DBTableView1TIMERTIME: TcxGridDBColumn;
+    cxGrid1DBTableView1SUBIDX: TcxGridDBColumn;
+    ComDataPacket1: TComDataPacket;
+    CheckBox1: TCheckBox;
     procedure Button1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure AnyActionExecute(Sender: TObject);
@@ -61,6 +73,11 @@ type
     procedure IBTActionsAfterTransactionEnd(Sender: TObject);
     procedure IBTActionsAfterDelete(DataSet: TDataSet);
     procedure BStartClick(Sender: TObject);
+    procedure ASettingsExecute(Sender: TObject);
+    procedure ComPort1Error(Sender: TObject; Errors: TComErrors);
+    procedure ComPort1RxChar(Sender: TObject; Count: Integer);
+    procedure AStartExecute(Sender: TObject);
+    procedure ComDataPacket1Packet(Sender: TObject; const Str: string);
   private
     { Private declarations }
   public
@@ -77,6 +94,23 @@ implementation
  uses UActions;
 
 {$R *.dfm}
+procedure TFMain.ComDataPacket1Packet(Sender: TObject; const Str: string);
+begin
+  FIMG.AvialableCom(Trim(Str));
+  ComDataPacket1.ResetBuffer;
+end;
+
+procedure TFMain.ComPort1Error(Sender: TObject; Errors: TComErrors);
+begin
+ ShowMessage('Ошибка COM порта');
+end;
+
+procedure TFMain.ComPort1RxChar(Sender: TObject; Count: Integer);
+var ComText:string;
+begin
+ ComPort1.ReadStr(ComText,Count);
+end;
+
 procedure TFMain.CreateQuery(var Q:TIBQuery);
 begin
   Q := TIBQuery.Create(nil);
@@ -87,7 +121,7 @@ end;
 procedure TFMain.AAddExecute(Sender: TObject);
 var QIns:TIBQuery;
 QGetMaxID:TIBQuery;
-MaxID:Integer;
+MaxID, MaxIDX, MaxSubIDX:Integer;
 MS:TMemoryStream;
 begin
 //  IBTActions.Insert;
@@ -96,26 +130,40 @@ begin
   QGetMaxID.Open;
   if not QGetMaxID.IsEmpty then MaxID := QGetMaxID.FieldByName('ID').AsInteger;
   QGetMaxID.Close;
+  QGetMaxID.SQL.Text := 'Select max(IDX) id from ACTIONS where istimer = 0';
+  if not QGetMaxID.IsEmpty then MaxIDX := QGetMaxID.FieldByName('ID').AsInteger;
+  QGetMaxID.Close;
+  QGetMaxID.SQL.Text := 'Select max(SubIDX) id from ACTIONS where istimer = 1';
+  if not QGetMaxID.IsEmpty then MaxSubIDX := QGetMaxID.FieldByName('ID').AsInteger;
+  QGetMaxID.Close;
   FreeAndNil(QGetMaxID);
 
   Application.CreateForm(TFAction, FAction);
-  FAction.DBEditID.EditText := IntToStr(MaxID+1);
+  FAction.DBEditID.Text := IntToStr(MaxID+1);
+  FAction.SEIDX.EditValue := MaxIDX+1;
+  FAction.SESubIDX.EditValue := MaxSubIDX+1;
   if FAction.ShowModal = mrOk
    then
    begin
     CreateQuery(QIns);
     MS := TMemoryStream.Create;
-    QIns.SQL.Text := 'Insert into ACTIONS  (BODY, CODE, IDX, NAME) values (:BODY, :CODE, :IDX, :NAME)';
-//    QIns.ParamByName('ID').AsInteger := MaxID + 1;
-    QIns.ParamByName('IDX').AsInteger := FAction.cxSpinEdit1.EditingValue;
+    QIns.SQL.Text := 'Insert into ACTIONS  (ID, BODY, CODE, IDX, NAME, isTimer, TimerTime, SubIDX) ' +
+                     'values (:ID, :BODY, :CODE, :IDX, :NAME, :isTimer, :TimerTime, :SubIDX)';
+    QIns.ParamByName('ID').AsInteger := MaxID + 1;
+    QIns.ParamByName('IDX').AsInteger := FAction.SEIDX.EditingValue;
      if Assigned(FAction.Image1.Picture.Graphic) then
      begin
       MS.Position := 0;
       FAction.Image1.Picture.Graphic.SaveToStream(Ms);
       QIns.ParamByName('BODY').LoadFromStream(MS,ftBlob);
      end;
-    QIns.ParamByName('NAME').AsString := FAction.DBEditNAME.EditText;
-    QIns.ParamByName('CODE').AsString := FAction.DBEditCODE.EditText;
+    QIns.ParamByName('NAME').AsString := FAction.DBEditNAME.Text;
+    QIns.ParamByName('CODE').AsString := FAction.DBEditCODE.Text;
+    if FAction.cbTimer.Checked
+    then QIns.ParamByName('isTimer').AsInteger := 1
+    else QIns.ParamByName('isTimer').AsInteger := 0;
+    QIns.ParamByName('TimerTime').AsInteger := FAction.SETimerTime.EditingValue;
+    QIns.ParamByName('SubIDX').AsInteger := FAction.SESubIDX.EditingValue;
     QIns.ExecSQL;
     FreeAndNil(QIns);
     FreeAndNil(MS);
@@ -172,29 +220,44 @@ end;
 procedure TFMain.AEditExecute(Sender: TObject);
 var MS:TMemoryStream;
 QUpd:TIBQuery;
-
 begin
   IBTActions.Edit;
   Application.CreateForm(TFAction, FAction);
   MS := TMemoryStream.Create;
   TBlobField(IBTActions.FieldByName('BODY')).SaveToStream(MS);
   MS.SaveToFile('1.jpg');
+  if MS.Size > 0 then
   FAction.Image1.Picture.LoadFromFile('1.jpg');
+
+  FAction.DBEditID.Text := IBTActions.FieldByName('ID').AsString;
+  FAction.DBEditNAME.Text := IBTActions.FieldByName('NAME').AsString;
+  FAction.DBEditCODE.Text := IBTActions.FieldByName('CODE').AsString;
+  FAction.SEIDX.EditValue := IBTActions.FieldByName('IDX').AsInteger;
+  FAction.cbTimer.Checked := IBTActions.FieldByName('isTimer').AsInteger = 1;
+  FAction.SETimerTime.EditValue := IBTActions.FieldByName('TimerTime').AsInteger;
+  FAction.SESubIDX.EditValue := IBTActions.FieldByName('SubIDX').AsInteger;
+
   if FAction.ShowModal = mrOk
    then
    begin
     CreateQuery(QUpd);
-    QUpd.SQL.Text := ('update ACTIONS set BODY = :BODY, CODE = :CODE,  IDX = :IDX,  NAME = :NAME where id=:id' );
+    QUpd.SQL.Text := ('update ACTIONS set BODY = :BODY, CODE = :CODE,  IDX = :IDX,  NAME = :NAME, ' +
+                      'isTimer= :isTimer, TimerTime = :TimerTime, SubIDX = :SubIDX where id=:id' );
     QUpd.ParamByName('ID').AsInteger := IBTActions.FieldByName('ID').AsInteger;
-    QUpd.ParamByName('IDX').AsInteger := FAction.cxSpinEdit1.EditingValue;
+    QUpd.ParamByName('IDX').AsInteger := FAction.SEIDX.EditingValue;
      if Assigned(FAction.Image1.Picture.Graphic) then
      begin
       MS.Position := 0;
       FAction.Image1.Picture.Graphic.SaveToStream(Ms);
       QUpd.ParamByName('BODY').LoadFromStream(MS,ftBlob);
      end;
-    QUpd.ParamByName('NAME').AsString := FAction.DBEditNAME.EditText;
-    QUpd.ParamByName('CODE').AsString := FAction.DBEditCODE.EditText;
+    QUpd.ParamByName('NAME').AsString := FAction.DBEditNAME.Text;
+    QUpd.ParamByName('CODE').AsString := FAction.DBEditCODE.Text;
+    if FAction.cbTimer.Checked
+    then QUpd.ParamByName('isTimer').AsInteger := 1
+    else QUpd.ParamByName('isTimer').AsInteger := 0;
+    QUpd.ParamByName('TimerTime').AsInteger := FAction.SETimerTime.EditingValue;
+    QUpd.ParamByName('SubIDX').AsInteger := FAction.SESubIDX.EditingValue;
     QUpd.ExecSQL;
     IBTransaction1.CommitRetaining;
     ARefresh.Execute;
@@ -217,12 +280,31 @@ begin
  IBTActions.Open;
 end;
 
+procedure TFMain.ASettingsExecute(Sender: TObject);
+begin
+ Application.CreateForm(TFrmSettings, FrmSettings);
+ if FrmSettings.ShowModal = mrOk then
+  begin
+   IBDatabase1.Connected := False;
+//   IBDatabase1.DatabaseName := FrmSettings.edit2.Text;
+   IBDatabase1.Connected := True;
+   IBTActions.Open;
+   ComPort1.StoreSettings(stRegistry, 'HKEY_LOCAL_MACHINE\Software\FirstAvenger');
+  end;
+ FrmSettings.Free;
+end;
+
+procedure TFMain.AStartExecute(Sender: TObject);
+begin
+ BStart.Click;
+end;
+
 procedure TFMain.BStartClick(Sender: TObject);
 begin
  if IBTActions.IsEmpty then Exit;
- PortUnit.PortInit;
+ ComPort1.Open;
  Application.CreateForm(TFIMG, FIMG);
- FIMG.ShowModal;
+ FIMG.Show;
 end;
 
 procedure TFMain.Button1Click(Sender: TObject);
@@ -242,6 +324,11 @@ procedure TFMain.FormCreate(Sender: TObject);
 begin
  A := 1;
  ALMain.State:= asNormal;
+ ComPort1.LoadSettings(stRegistry, 'HKEY_LOCAL_MACHINE\Software\FirstAvenger');
+ IBDatabase1.Connected := false;
+ IBDatabase1.DatabaseName := ExtractFileDir(Application.ExeName) + '\Avenger.gdb';
+ IBDatabase1.Connected := True;
+ IBTActions.Open;
 end;
 
 

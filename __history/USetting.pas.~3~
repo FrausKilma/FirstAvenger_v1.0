@@ -1,0 +1,29 @@
+unit USetting;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Buttons;
+
+type
+  TFrmSettings = class(TForm)
+    Btn1: TButton;
+    btnOk: TBitBtn;
+    btnCancel: TBitBtn;
+    Btn2: TButton;
+    edit2: TEdit;
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  FrmSettings: TFrmSettings;
+
+implementation
+ uses  UFirstAvenger;
+{$R *.dfm}
+
+end.

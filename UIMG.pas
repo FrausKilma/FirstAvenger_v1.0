@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxContainer, cxEdit, System.Actions, Vcl.ActnList,
-  cxImage, DB;
+  cxImage, DB, Vcl.ExtCtrls, Vcl.StdCtrls;
 
 type
     RImage = record
@@ -17,16 +17,24 @@ type
     TimerON:Boolean;
     Time:Integer;
     IDX:Integer;
+    SubIDX:Integer;
     procedure add;
   end;
 
+ ArrImage= Array of RImage;
+
   TFIMG = class(TForm)
     cxImage1: TcxImage;
-    actlstMAIN: TActionList;
+    Timer1: TTimer;
+    Memo1: TMemo;
+    ActionList1: TActionList;
+    AExit: TAction;
     procedure FormShow(Sender: TObject);
     procedure FormCreate(Sender: TObject);
-    function FindImage(Code:String):RImage;
-    procedure AvialableCom(Text:String);
+    function FindImage(Code:String):ArrImage;
+    procedure AvialableCom(Text:WideString);
+    procedure Timer1Timer(Sender: TObject);
+    procedure AExitExecute(Sender: TObject);
   private
     { Private declarations }
   public
@@ -35,7 +43,12 @@ type
 var
   FIMG: TFIMG;
   ImageControler:array of RImage;
+  FindedImage:ArrImage;
   DefImage:RImage;
+  NumImage:Integer;
+
+  TimerExec:Boolean;
+  TimerImg:RImage;
 
 implementation
 uses UFirstAvenger, PortUnit;
@@ -43,56 +56,105 @@ uses UFirstAvenger, PortUnit;
 {$R *.dfm}
 procedure RImage.add;
 var num:Integer;
-MS:TMemoryStream;
+//MS:TMemoryStream;
 begin
  SetLength(ImageControler, Length(ImageControler)+1);
  num:=High(ImageControler);
  ImageControler[num].ID := FMain.IBTActions.FieldByName('ID').AsInteger;
  ImageControler[num].Name := FMain.IBTActions.FieldByName('NAME').AsString;
  ImageControler[num].Code := FMain.IBTActions.FieldByName('CODE').AsString;
- MS := TMemoryStream.Create;
- TBlobField(FMain.IBTActions.FieldByName('BODY')).SaveToStream(MS);
+ ImageControler[num].IDX := FMain.IBTActions.FieldByName('IDX').AsInteger;
+// MS := TMemoryStream.Create;
  ImageControler[num].IMG := TMemoryStream.Create;
- ImageControler[num].IMG := MS;
- ImageControler[num].TimerON := false; // GO TO
- ImageControler[num].Time := 0; // GO TO
- FreeAndNil(MS);
+ TBlobField(FMain.IBTActions.FieldByName('BODY')).SaveToStream(ImageControler[num].IMG);
+ if FMain.IBTActions.FieldByName('isTimer').AsInteger = 0
+ then ImageControler[num].TimerON := false
+ else ImageControler[num].TimerON := True;
+ ImageControler[num].Time :=FMain.IBTActions.FieldByName('TimerTime').AsInteger; // GO TO
+ ImageControler[num].SubIDX := FMain.IBTActions.FieldByName('SubIDX').AsInteger;; // GO TO
+// FreeAndNil(MS);
 end;
 
 procedure TFIMG.FormCreate(Sender: TObject);
 begin
   SetLength(ImageControler, 0);
+  NumImage:=0;
 end;
 
 procedure TFIMG.FormShow(Sender: TObject);
 var i:Integer;
 defAction:TAction;
 begin
+ Memo1.Visible := FMain.CheckBox1.Checked;
  FMain.IBTActions.First;
  while not FMain.IBTActions.Eof do
  begin
   DefImage.add;
   FMain.IBTActions.Next;
  end;
-
+ Timer1.Enabled := True;
 end;
 
-procedure TFIMG.AvialableCom(Text: String);
-var Img:RImage;
+procedure TFIMG.Timer1Timer(Sender: TObject);
 begin
-  Img := FindImage(Text);
-  Img.IMG.SaveToFile('C:\1.jpg');
-  cxImage1.Picture.LoadFromFile('C:\1.jpg');
+ if TimerImg.IMG <> nil then
+  begin
+   TimerImg.IMG.SaveToFile('C:\1.jpg');
+   cxImage1.Picture.LoadFromFile('C:\1.jpg');
+  end;
+ TimerExec := true;
 end;
 
-function TFIMG.FindImage(Code:String):RImage;
+procedure TFIMG.AExitExecute(Sender: TObject);
+begin
+ ModalResult := mrOk;
+ Close;
+end;
+
+procedure TFIMG.AvialableCom(Text: WideString);
+var Img:ArrImage;
+i:Integer;
+begin
+ Memo1.Lines.Add(text);
+ if Text <> '' then
+  begin
+   Img := FindImage(Text);
+   if Length(Img) = 0 then Exit;
+   if Length(Img) = 1 then
+   begin
+    Img[0].IMG.SaveToFile('C:\1.jpg');
+    cxImage1.Picture.LoadFromFile('C:\1.jpg');
+    Application.ProcessMessages;
+   end
+   else
+   begin
+    for I := Low(Img) to High(Img) do
+    begin
+     TimerImg := Img[i];
+     TimerExec:= false;
+     Timer1.Enabled := false;
+     Timer1.Interval := TimerImg.Time * 1000;
+     Timer1.Enabled := true;
+     while not TimerExec do
+      begin
+       // ждём пока таймер закончится
+       Application.ProcessMessages;
+      end;
+    end;
+     Timer1.Enabled := false;
+   end;
+  end;
+end;
+
+function TFIMG.FindImage(Code:String):ArrImage;
 var i :Integer;
 begin
   for i := Low(ImageControler) to High(ImageControler) do
    begin
      if UpperCase(ImageControler[i].Code) = UpperCase(Code) then
       begin
-        Result := ImageControler[i];
+        SetLength(Result, Length(Result) + 1);
+        Result[High(Result)] := ImageControler[i];
       end;
    end;
 
